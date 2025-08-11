@@ -1,13 +1,13 @@
-package dsa
+package dll
 
 import "fmt"
 
-type doublyLinkedList[T any] struct {
-	head        *node[T]
-	tail        *node[T]
-	length      uint
+type DoublyLinkedList[T any] struct {
+	head   *node[T]
+	tail   *node[T]
+	length uint
+	// For most primitive types(integers, decimal, string), cmp.Compare can be used
 	orderedFunc func(a, b T) int // should return 0 if equal, -ve value if a < b, and +ve if a > b
-	// For most primitive types, cmp.Compare can be used
 }
 
 type node[T any] struct {
@@ -16,18 +16,21 @@ type node[T any] struct {
 	prev  *node[T]
 }
 
-func NewDoublyLinkedList[T any](f func(a, b T) int) *doublyLinkedList[T] {
-	return &doublyLinkedList[T]{orderedFunc: f}
+func NewDoublyLinkedList[T any](f func(a, b T) int) *DoublyLinkedList[T] {
+	if f == nil {
+		panic("Comparison function cannot be nil")
+	}
+	return &DoublyLinkedList[T]{orderedFunc: f}
 }
 
-func (dll *doublyLinkedList[T]) Append(value T) {
-	if dll == nil {
+func (dll *DoublyLinkedList[T]) Append(value T) {
+	if dll == nil || dll.orderedFunc == nil {
 		panic("Doubly Linked List is not initialized")
 	}
 
 	dll.length++
 	newNode := &node[T]{value: value, prev: dll.tail}
-	if dll.head == nil {
+	if dll.length == 1 {
 		dll.head = newNode
 		dll.tail = newNode
 		return
@@ -37,14 +40,14 @@ func (dll *doublyLinkedList[T]) Append(value T) {
 	dll.tail = newNode
 }
 
-func (dll *doublyLinkedList[T]) Prepend(value T) {
-	if dll == nil {
+func (dll *DoublyLinkedList[T]) Prepend(value T) {
+	if dll == nil || dll.orderedFunc == nil {
 		panic("Doubly Linked List is not initialized")
 	}
 
 	dll.length++
 	newNode := &node[T]{value: value, next: dll.head}
-	if dll.head == nil {
+	if dll.length == 1 {
 		dll.head = newNode
 		dll.tail = newNode
 		return
@@ -54,8 +57,9 @@ func (dll *doublyLinkedList[T]) Prepend(value T) {
 	dll.head = newNode
 }
 
-func (dll *doublyLinkedList[T]) InsertAtIndex(value T, index uint) {
-	if dll == nil {
+// Indexing starts at 0. If index > DLL length, function panics
+func (dll *DoublyLinkedList[T]) InsertAtIndex(value T, index uint) {
+	if dll == nil || dll.orderedFunc == nil {
 		panic("Doubly Linked List is not initialized")
 	} else if index == 0 {
 		dll.Prepend(value)
@@ -68,39 +72,43 @@ func (dll *doublyLinkedList[T]) InsertAtIndex(value T, index uint) {
 	}
 
 	curr := dll.head
-	dll.length++
 	for index > 0 {
 		curr = curr.next
 		index--
 	}
 
+	dll.length++
 	newNode := &node[T]{value: value, next: curr, prev: curr.prev}
 	curr.prev.next = newNode
 	curr.prev = newNode
 }
 
-func (dll *doublyLinkedList[T]) Print() {
-	if dll == nil {
+func (dll *DoublyLinkedList[T]) Print() {
+	if dll == nil || dll.orderedFunc == nil {
 		panic("Doubly Linked List is not initialized")
+	} else if dll.length == 0 {
+		return
 	}
 
-	curr := dll.head
+	fmt.Print(dll.head.value)
+	curr := dll.head.next
 	for curr != nil {
-		fmt.Println(curr.value)
+		fmt.Printf(" <-> %v", curr.value)
 		curr = curr.next
 	}
+	fmt.Println()
 }
 
-func (dll *doublyLinkedList[T]) Length() uint {
-	if dll == nil {
+func (dll *DoublyLinkedList[T]) Length() uint {
+	if dll == nil || dll.orderedFunc == nil {
 		panic("Doubly Linked List is not initialized")
 	}
 
 	return dll.length
 }
 
-func (dll *doublyLinkedList[T]) Pop() T {
-	if dll == nil {
+func (dll *DoublyLinkedList[T]) Pop() T {
+	if dll == nil || dll.orderedFunc == nil {
 		panic("Doubly Linked List is not initialized")
 	} else if dll.length == 0 {
 		panic("Pop from Empty Doubly Linked List")
@@ -120,8 +128,8 @@ func (dll *doublyLinkedList[T]) Pop() T {
 	return val
 }
 
-func (dll *doublyLinkedList[T]) PopFromFront() T {
-	if dll == nil {
+func (dll *DoublyLinkedList[T]) PopFromFront() T {
+	if dll == nil || dll.orderedFunc == nil {
 		panic("Doubly Linked List is not initialized")
 	} else if dll.length == 0 {
 		panic("PopFromFront from Empty Doubly Linked List")
@@ -141,11 +149,12 @@ func (dll *doublyLinkedList[T]) PopFromFront() T {
 	return val
 }
 
-func (dll *doublyLinkedList[T]) RemoveAtIndex(index uint) T {
-	if dll == nil {
+// Returns value at index after removing it. If index > length or DLL length == 0, function panics
+func (dll *DoublyLinkedList[T]) RemoveAtIndex(index uint) T {
+	if dll == nil || dll.orderedFunc == nil {
 		panic("Doubly Linked List is not initialized")
 	} else if dll.length == 0 {
-		panic("Remove From Empty Doubly Linked List")
+		panic("RemoveAtIndex From Empty Doubly Linked List")
 	} else if index == 0 {
 		return dll.PopFromFront()
 	} else if index == dll.length-1 {
@@ -168,8 +177,9 @@ func (dll *doublyLinkedList[T]) RemoveAtIndex(index uint) T {
 	return curr.value
 }
 
-func (dll *doublyLinkedList[T]) RemoveVal(val T) bool {
-	if dll == nil {
+// Returns true when value is found and removed
+func (dll *DoublyLinkedList[T]) RemoveVal(val T) bool {
+	if dll == nil || dll.orderedFunc == nil {
 		panic("Doubly Linked List is not initialized")
 	} else if dll.length == 0 {
 		return false
@@ -179,21 +189,58 @@ func (dll *doublyLinkedList[T]) RemoveVal(val T) bool {
 	for curr != nil && dll.orderedFunc(val, curr.value) != 0 {
 		curr = curr.next
 	}
-	if curr == nil {
-		return false
-	}
 
-	if curr == dll.head {
+	switch {
+	case curr == nil:
+		return false
+	case curr.prev == nil:
 		_ = dll.PopFromFront()
 		return true
-	} else if curr == dll.tail {
+	case curr.next == nil:
 		_ = dll.Pop()
 		return true
 	}
+
 	dll.length--
 	curr.prev.next = curr.next
 	curr.next.prev = curr.prev
 	curr.next = nil
 	curr.prev = nil
 	return true
+}
+
+// Returns index if value is found
+func (dll *DoublyLinkedList[T]) Contains(val T) (uint, bool) {
+	if dll == nil || dll.orderedFunc == nil {
+		panic("Doubly Linked List is not initialized")
+	} else if dll.length == 0 {
+		return 0, false
+	}
+
+	curr := dll.head
+	var index uint
+	for curr != nil && dll.orderedFunc(val, curr.value) != 0 {
+		curr = curr.next
+		index++
+	}
+
+	if curr == nil {
+		return 0, false
+	}
+	return index, true
+}
+
+func (dll *DoublyLinkedList[T]) Reverse() {
+	if dll == nil || dll.orderedFunc == nil {
+		panic("Doubly Linked List is not initialized")
+	} else if dll.length <= 1 {
+		return
+	}
+
+	curr := dll.head
+	for curr != nil {
+		curr.prev, curr.next = curr.next, curr.prev
+		curr = curr.prev
+	}
+	dll.head, dll.tail = dll.tail, dll.head
 }
