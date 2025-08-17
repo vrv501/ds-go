@@ -23,10 +23,6 @@ func (s *Stack[T]) Push(value T) {
 
 	s.length++
 	newNode := &node[T]{value: value, next: s.top}
-	if s.length == 1 {
-		s.top = newNode
-		return
-	}
 	s.top = newNode
 }
 
